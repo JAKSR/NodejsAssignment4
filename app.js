@@ -119,6 +119,10 @@ const authenticateToken = (request, response, next) => {
 };
 
 app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
+  const loggedUser = request.username;
+  const selectUserQuery = `SELECT user_id FROM user WHERE username = '${loggedUser}'`;
+  const dbUser = await db.get(selectUserQuery);
+
   const getTweetsQuery = `
     SELECT 
       username, tweet, date_time as dateTime
@@ -126,10 +130,9 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
       INNER JOIN tweet ON user.user_id = tweet.user_id
       INNER JOIN follower ON tweet.user_id = follower.follower_id
     WHERE 
-      follower.following_user_id
+      follower.follower_user_id = ${dbUser.user_id}
     ORDER BY 
-        dateTime DESC,
-        username ASC
+        dateTime DESC
     LIMIT 4; 
     `;
   const tweetsArray = await db.all(getTweetsQuery);
@@ -137,10 +140,14 @@ app.get("/user/tweets/feed/", authenticateToken, async (request, response) => {
 });
 
 app.get("/user/following/", authenticateToken, async (request, response) => {
+  const loggedUser = request.username;
+  const selectUserQuery = `SELECT user_id FROM user WHERE username = '${loggedUser}'`;
+  const dbUser = await db.get(selectUserQuery);
+
   const getFollowingQuery = `
-    SELECT user.name 
+    SELECT name 
     FROM user 
-    INNER JOIN follower ON user.user_id = follower.follower_id
+    INNER JOIN follower ON ${dbUser.user_id} = follower.follower_id
     WHERE 
       follower.following_user_id
     `;
@@ -149,9 +156,13 @@ app.get("/user/following/", authenticateToken, async (request, response) => {
 });
 
 app.get("/user/followers/", authenticateToken, async (request, response) => {
+  const loggedUser = request.username;
+  const selectUserQuery = `SELECT user_id FROM user WHERE username = '${loggedUser}'`;
+  const dbUser = await db.get(selectUserQuery);
+
   const getFollowerQuery = `
     SELECT user.name FROM 
-    user INNER JOIN follower ON user.user_id = follower.follower_id
+    user INNER JOIN follower ON ${dbUser.user_id} = follower.follower_id
     WHERE 
       follower.follower_user_id
     `;
